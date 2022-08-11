@@ -3,6 +3,7 @@ package io
 import (
 	"io/fs"
 	"os"
+	atomic "gregwebs/atomic"
 )
 
 // WriteFileToDisk ensures the data is written to disk.
@@ -17,26 +18,12 @@ func WriteFileToDisk(file string, fileBytes []byte, perm fs.FileMode) error {
 	return writeClose(f, fileBytes)
 }
 
-// WriteFileTransactional first writes to file.tmp
-// Once the write is successful, it will rename it to file.
-// This avoids the possiblity of ending up with an empty file.
-// Additionally, if there is an error after opening,
-// it attempts to remove the file in question.
-func WriteFileTransactional(file string, fileBytes []byte, perm fs.FileMode) error {
-	tmpName := file + ".tmp"
-	// Ignore any errors during file removal
-	// since we don't really care about the .tmp file
-	defer os.Remove(tmpName)
-	if err := WriteFileToDisk(tmpName, fileBytes, perm); err != nil {
-		return err
-	}
-	err := os.Rename(tmpName, file)
-	if err != nil {
-		// Ignore this error and return the prior error
-		// This may be unnecessary but shouldn't cause a problem
-		_ = os.Remove(file)
-	}
-	return err
+// AtomicWrite avoids errors that can occur during file creation
+// It creates an intermediate tempfile in the directory of the file.
+// The tempfile is then renamed to the given filename.
+// This avoids for example the possiblity of ending up with an empty file.
+func AtomicWrite(file string, fileBytes []byte, perm fs.FileMode) error {
+	atomic.WriteFile(file, fileBytes, perm)
 }
 
 func writeClose(f *os.File, fileBytes []byte) error {

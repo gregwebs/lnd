@@ -47,18 +47,18 @@ func TestWriteFileToDisk(t *testing.T) {
 	ensureFileContents(t, filename, data1)
 }
 
-func TestWriteFileTransactional(t *testing.T) {
+func TestAtomicWrite(t *testing.T) {
 	f, deferred := ensureTempfile(t)
 	filename := f.Name()
 	defer deferred()
-	if err := io.WriteFileTransactional(filename, []byte(data2), 0644); err != nil {
-		t.Fatalf("WriteFileTransactional %s: %v", filename, err)
+	if err := io.AtomicWrite(filename, []byte(data2), 0644); err != nil {
+		t.Fatalf("AtomicWrite %s: %v", filename, err)
 	}
 	ensureFileContents(t, filename, data2)
 
 	// overwrite existing file
-	if err := io.WriteFileTransactional(filename, []byte(data1), 0644); err != nil {
-		t.Fatalf("WriteFileTransactional %s: %v", filename, err)
+	if err := io.AtomicWrite(filename, []byte(data1), 0644); err != nil {
+		t.Fatalf("AtomicWrite %s: %v", filename, err)
 	}
 	ensureFileContents(t, filename, data1)
 
@@ -67,7 +67,7 @@ func TestWriteFileTransactional(t *testing.T) {
 	tmpName := filename + ".tmp"
 	_, err := os.Stat(tmpName)
 	if err == nil {
-		t.Fatalf("WriteFileTransactional tmp exists %s: %v", tmpName, err)
+		t.Fatalf("AtomicWrite tmp exists %s: %v", tmpName, err)
 	}
 	if fh, err := os.Create(tmpName); err != nil {
 		t.Fatalf("Error setting up read-only %s: %v", filename, err)
@@ -77,20 +77,20 @@ func TestWriteFileTransactional(t *testing.T) {
 		t.Fatalf("Error changing to read-only %s: %v", filename, err)
 	}
 
-	if err := io.WriteFileTransactional(filename, []byte(data2), 0644); err == nil {
-		t.Fatalf("WriteFileTransactional expected permission error %s", filename)
+	if err := io.AtomicWrite(filename, []byte(data2), 0644); err == nil {
+		t.Fatalf("AtomicWrite expected permission error %s", filename)
 	}
 
 	// The original file is not altered
 	_, err = os.Stat(filename)
 	if err != nil {
-		t.Fatalf("WriteFileTransactional original does not exist %s: %v", filename, err)
+		t.Fatalf("AtomicWrite original does not exist %s: %v", filename, err)
 	}
 	ensureFileContents(t, filename, data1)
 
 	_, err = os.Stat(tmpName)
 	if err == nil {
-		t.Fatalf("WriteFileTransactional tmp exists %s: %v", tmpName, err)
+		t.Fatalf("AtomicWrite tmp exists %s: %v", tmpName, err)
 	}
 }
 
